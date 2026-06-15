@@ -1,8 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const sequelize = require('./config/database');
-require('./models');
+const { createTables } = require('./db');
 
 const authRoutes = require('./routes/authRoutes');
 const todoRoutes = require('./routes/todoRoutes');
@@ -32,10 +31,10 @@ app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 3000;
 
-sequelize.sync().then(() => {
+createTables().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }).catch((error) => {
-  console.error('Database connection failed:', error.message);
+  console.error('Database initialization failed:', error.message);
 });

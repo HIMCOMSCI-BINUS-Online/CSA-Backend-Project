@@ -13,12 +13,13 @@ const statusSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed']),
 });
 
-const allowedSortFields = ['title', 'dueDate', 'priority', 'status', 'createdAt', 'updatedAt'];
-
-const buildOrder = (sortBy = 'createdAt', order = 'DESC') => {
-  const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
-  const safeOrder = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-  return [[safeSortBy, safeOrder]];
+const sortMapping = {
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  dueDate: 'due_date',
+  title: 'title',
+  priority: 'priority',
+  status: 'status',
 };
 
 const createTodo = async (payload, user) => {
@@ -32,7 +33,7 @@ const createTodo = async (payload, user) => {
 };
 
 const getTodoDetail = async (id, userId) => {
-  const todo = await todoRepository.findTodoById(id, userId);
+  const todo = await todoRepository.findById(id, userId);
   if (!todo || todo.isDeleted) {
     const error = new Error('Todo not found');
     error.statusCode = 404;
@@ -42,84 +43,72 @@ const getTodoDetail = async (id, userId) => {
 };
 
 const listTodos = async (query, userId, options = {}) => {
-  const where = todoRepository.buildListQuery({
+  const sortBy = sortMapping[query.sortBy] || 'created_at';
+
+  return todoRepository.list({
     userId,
     status: query.status,
-    q: query.q,
+    search: query.q,
     dueDateFrom: query.dueDateFrom,
     dueDateTo: query.dueDateTo,
     duePreset: options.duePreset || query.duePreset,
     deletedOnly: options.deletedOnly || false,
-  });
-
-  return todoRepository.listTodos({
-    where,
-    order: buildOrder(query.sortBy, query.order),
+    sortBy,
+    sortDir: query.order,
   });
 };
 
 const updateTodo = async (id, payload, user) => {
-  const todo = await getTodoDetail(id, user.id);
+  await getTodoDetail(id, user.id);
   const data = todoSchema.parse(payload);
-
-  return todoRepository.updateTodo(todo, {
-    ...data,
+  return todoRepository.updateTodo(id, user.id, {
+    title: data.title,
+    description: data.description,
+    dueDate: data.dueDate,
+    priority: data.priority,
     updatedBy: user.username,
   });
 };
 
 const changeStatus = async (id, payload, user) => {
-  const todo = await getTodoDetail(id, user.id);
+  await getTodoDetail(id, user.id);
   const data = statusSchema.parse(payload);
-
-  return todoRepository.updateTodo(todo, {
+  return todoRepository.changeStatus(id, user.id, {
     status: data.status,
     updatedBy: user.username,
   });
 };
 
 const deleteTodo = async (id, user) => {
-  const todo = await getTodoDetail(id, user.id);
-  return todoRepository.updateTodo(todo, {
-    isDeleted: true,
+  await getTodoDetail(id, user.id);
+  return todoRepository.softDelete(id, user.id, {
     deletedAt: new Date(),
     updatedBy: user.username,
   });
 };
 
 const restoreTodo = async (id, user) => {
-  const todo = await todoRepository.findTodoById(id, user.id);
+  const todo = await todoRepository.findById(id, user.id);
   if (!todo || !todo.isDeleted) {
     const error = new Error('Deleted todo not found');
     error.statusCode = 404;
     throw error;
   }
-
-  return todoRepository.updateTodo(todo, {
-    isDeleted: false,
-    deletedAt: null,
+  return todoRepository.restore(id, user.id, {
     updatedBy: user.username,
   });
 };
 
 const getDashboardSummary = async (userId) => {
-  const today = new Date().toISOString().slice(0, 10);
-
   const [allTasks, todayTasks, overdueTasks, completedTasks, deletedTasks] = await Promise.all([
-    todoRepository.countTodos({ userId, isDeleted: false }),
-    todoRepository.countTodos({ userId, isDeleted: false, dueDate: today }),
-    todoRepository.countTodos({ userId, isDeleted: false, dueDate: { [require('sequelize').Op.lt]: today }, status: { [require('sequelize').Op.ne]: 'completed' } }),
-    todoRepository.countTodos({ userId, isDeleted: false, status: 'completed' }),
-    todoRepository.countTodos({ userId, isDeleted: true }),
+    todoRepository.countActive(userId),
+    todoRepository.countToday(userId),
+    todoRepository.countOverdue(userId),
+    todoRepository.countCompleted(userId),
+    todoRepository.countDeleted(userId),
   ]);
 
-  return {
-    allTasks,
-    todayTasks,
-    overdueTasks,
-    completedTasks,
-    deletedTasks,
-  };
+  return { allTasks, todayTasks, overdueTasks, completedTasks, deletedTasks };
 };
 
 module.exports = {

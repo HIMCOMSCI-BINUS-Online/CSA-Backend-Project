@@ -14,8 +14,7 @@ Backend project Express.js dengan arsitektur **Controller-Service-Repository** u
 
 ## Stack
 - Express.js
-- Sequelize
-- MySQL
+- MySQL (raw SQL with mysql2)
 - JWT
 - bcryptjs
 - Zod
@@ -25,8 +24,8 @@ Backend project Express.js dengan arsitektur **Controller-Service-Repository** u
 src/
 ├── config/
 ├── controllers/
+├── db/
 ├── middlewares/
-├── models/
 ├── repositories/
 ├── routes/
 ├── services/
