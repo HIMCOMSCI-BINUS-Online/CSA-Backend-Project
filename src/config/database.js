@@ -1,16 +1,11 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'todo_app',
-  process.env.DB_USER || 'root',
-  process.env.DB_PASSWORD || '',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    dialect: 'mysql',
-    logging: false,
-  }
-);
+// Inisialisasi Sequelize dengan dialect SQLite
+const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: process.env.DB_STORAGE || './db/database.sqlite',
+  logging: false // Ubah ke console.log jika ingin melihat query SQL yang dijalankan di background
+});
 
 module.exports = sequelize;

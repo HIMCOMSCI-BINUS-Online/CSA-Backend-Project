@@ -1,41 +1,42 @@
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const todoRoutes = require('./routes/todoRoutes')
+const dotenv = require('dotenv')
 const sequelize = require('./config/database');
-require('./models');
 
-const authRoutes = require('./routes/authRoutes');
-const todoRoutes = require('./routes/todoRoutes');
-const errorMiddleware = require('./middlewares/errorMiddleware');
-const { successResponse } = require('./utils/apiResponse');
 
-const app = express();
+dotenv.config()
 
-app.use(cors());
+const app = express()
+const PORT = process.env.PORT
+
+// Middleware wajib agar Express bisa membaca JSON dari request body
 app.use(express.json());
 
-app.get('/api/v1/health', (req, res) => successResponse(res, 'API is running', {
-  app: 'CSA Minimalist Todo Backend',
-}));
+// Health Check Endpoint
+app.get('/health', (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: 'API Todo berjalan dengan baik!'
+  });
+});
 
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/todos', todoRoutes);
+// daftarkan todoRoutes.js agar terbaca oleh app.js
+app.use('/todos', todoRoutes)
 
 app.use((req, res) => {
-  return res.status(404).json({
-    success: false,
-    message: 'Route not found',
-  });
-});
+    return res.status(404).json({
+        success: false,
+        message: "route not found"
+    })
+})
 
-app.use(errorMiddleware);
-
-const PORT = process.env.PORT || 3000;
-
-sequelize.sync().then(() => {
+sequelize.sync({
+  alter: true
+}).then(() => {
+  console.log('Database SQLite berhasil tersambung dan tersinkronisasi')
   app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}).catch((error) => {
-  console.error('Database connection failed:', error.message);
-});
+      console.log(`Service API jalan di port ${PORT}`)
+  })
+}).catch((err) => {
+  console.error('Gagal terhubung ke SQLite', err.message)
+})
