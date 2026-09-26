@@ -1,3 +1,6 @@
+dapatkan salinan dari folder project
+- git clone https://github.com/HIMCOMSCI-BINUS-Online/CSA-Backend-Project.git atau Download project zip di tombol atas
+
 jalankan command perintah hingga dapat menjalankan project:
 - npm i
 - copy file .env.example ke .env
