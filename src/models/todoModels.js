@@ -30,10 +30,15 @@ const Todo = sequelize.define('Todo', {
         type: DataTypes.ENUM('pending', 'in_progress', 'completed'),
         defaultValue: 'pending'
     },
-    estimatedHours: {
-        type: DataTypes.INTEGER,
-        defaultValue: 1
-    }
+    isDeleted: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
+    deletedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
 }, {
     tableName: 'todos',
     timestamps: true
